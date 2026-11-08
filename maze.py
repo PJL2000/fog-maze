@@ -20,8 +20,29 @@ from pathlib import Path
 from game import DIFFICULTIES, DEFAULT_DIFFICULTY, get_difficulty
 from maze_map import MapError, MazeMap, discover_maps, load_map
 
-BASE_DIR = Path(__file__).resolve().parent
-MAPS_DIR = BASE_DIR / "maps"
+def _app_dir() -> Path:
+    """程序自身所在目录。打包后指向 exe 旁边，而不是临时解压目录。"""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def _bundle_dir() -> Path:
+    """只读资源目录。打包后是 PyInstaller 的临时解压目录，源码运行时同 _app_dir()。"""
+    bundled = getattr(sys, "_MEIPASS", None)
+    return Path(bundled) if bundled else _app_dir()
+
+
+def _default_maps_dir() -> Path:
+    """默认地图目录：exe/仓库旁的 maps 优先，没有就用打进包里的那份。"""
+    external = _app_dir() / "maps"
+    if external.is_dir():
+        return external
+    return _bundle_dir() / "maps"
+
+
+BASE_DIR = _app_dir()
+MAPS_DIR = _default_maps_dir()
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
